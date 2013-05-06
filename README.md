@@ -4,31 +4,31 @@ WorkerJS makes it easy to write concise, concurrent Javascript.
 
 #The Basics
 
--Overview
+##Overview
 
-  <script type="text/javascript" src="WorkerJS.js"></script>
-  <script type="text/javascript">
+	<script type="text/javascript" src="WorkerJS.js"></script>
+	<script type="text/javascript">
 		var theRestOfMyCode;
-		
+	
 		$WorkerJS({
-		  // This is the 'Bridge'
+			// This is the 'Bridge'
 		}, function() { 
-		  // This is the 'Worker'
+			// This is the 'Worker'
 		}, function(instance) {
-		  // This is the 'Gateway'
+			// This is the 'Gateway'
 		});
-  </script>
+	</script>
 
--Gateway
+##Gateway
 
 The Gateway provides an 'instance' object allowing interaction with the worker.
 
--Worker
+##Worker
 
 The Worker defines the code which will be run in a WebWorker, in a separate context.
 All global functions defined here become properties of the 'instance' object.
 
--Bridge
+##Bridge
 
 The Bridge allows you to define accessors/mutators to make theRestOfMyCode available to the Worker.
 Any functions defined within the Bridge are made available within the public scope of the Worker.

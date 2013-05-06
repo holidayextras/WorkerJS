@@ -4,6 +4,7 @@ WorkerJS makes it easy to write lightweight, concise, concurrent Javascript.
 
 ##Overview
 
+```javascript
 	<script type="text/javascript" src="WorkerJS.js"></script>
 	<script type="text/javascript">
 		var theRestOfMyCode;
@@ -21,10 +22,11 @@ WorkerJS makes it easy to write lightweight, concise, concurrent Javascript.
 		  // Functions defined in the Worker become properties of the 'instance' object.
 		});
 	</script>
-
+```
 
 ##Example Working with Primes
 
+```javascript
 	<!doctype html>
 	<html>
 		<head>
@@ -34,10 +36,10 @@ WorkerJS makes it easy to write lightweight, concise, concurrent Javascript.
 		    var primes=[];
 		    var finished = false;
 		    
-		    $WorkerJS({ // TLDR; Functions we want to push into the parallel scope.
+		    $WorkerJS({ // TLDR; Functions we want to push into the Worker.
 		      // 1. This is the 'Bridge'.
-		      // 2. Any functions put into this object will be available as globals in the parallel scope.
-		      // 3. All functions have this.callback which communicates data back into the parallel scope.
+		      // 2. Any functions put into this object will be available as globals in the Worker.
+		      // 3. All functions have this.callback which communicates data back into the Worker.
 		      // 4. These functions exist in the normal, expected scope.
 		      addPrime: function(somePrime) {
 		        primes.push(somePrime);
@@ -45,9 +47,9 @@ WorkerJS makes it easy to write lightweight, concise, concurrent Javascript.
 		      getPrimes: function() {
 		        this.callback(primes);
 		      }
-		    }, function() { // TLDR; Definition of the parallel (worker) scope.
+		    }, function() { // TLDR; Definition of the Worker.
 		      // 1. This is the 'Worker'.
-		      // 2. This is the code which runs in parallel, in a totally separate parallel (worker) scope. 
+		      // 2. This is the code which runs in parallel, in a totally separate WebWorker scope. 
 		      // 3. Functions defined in the Bridge will be available in this function's global scope.
 		      // 4. Global functions defined in the Worker will become properties in the Gateway.
 		      // 5. All functions have this.callback which ferries data back into the main scope.
@@ -67,7 +69,7 @@ WorkerJS makes it easy to write lightweight, concise, concurrent Javascript.
 		        }
 		        this.callback({ result: "success" });
 		      };
-		    }, function(instance) { // TLDR; Interacting with the parallel (worker) scope.
+		    }, function(instance) { // TLDR; Interacting with the Worker.
 		      // 1. This is the 'Gateway'.
 		      // 2. 'instance' has a property for each function defined in the Worker.
 		      // 3. Each function defined in the Worker gains an additional callback parameter.
@@ -86,10 +88,11 @@ WorkerJS makes it easy to write lightweight, concise, concurrent Javascript.
 		  </script>
 		</head>
 	</html>
-
+```
 
 ## Example without Comments
 
+```javascript
 	<!doctype html>
 	<html>
 		<head>
@@ -137,4 +140,5 @@ WorkerJS makes it easy to write lightweight, concise, concurrent Javascript.
 		  </script>
 		</head>
 	</html>
+```
 

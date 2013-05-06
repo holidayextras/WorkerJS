@@ -1,42 +1,29 @@
-#Introduction
+##Introduction
 
-WorkerJS makes it easy to write concise, concurrent Javascript.
-
-#The Basics
+WorkerJS makes it easy to write lightweight, concise, concurrent Javascript.
 
 ##Overview
 
 	<script type="text/javascript" src="WorkerJS.js"></script>
 	<script type="text/javascript">
 		var theRestOfMyCode;
-	
+		
 		$WorkerJS({
-			// This is the 'Bridge'
+		  // This is the 'Bridge'
+		  // Functions defined here become global functions in the Worker.
+		  // Functions defined here should sync data between Worker <--> theRestOfMyCode.
 		}, function() { 
-			// This is the 'Worker'
+		  // This is the 'Worker', it runs in a WebWorker (in a separate context).
+		  // Functions defined in the Bridge exist in this global scope.
+		  // Functions defined here become properties of the 'instance' object in the Gateway.
 		}, function(instance) {
-			// This is the 'Gateway'
+		  // This is the 'Gateway', it allows interaction with the Worker.
+		  // Functions defined in the Worker become properties of the 'instance' object.
 		});
 	</script>
 
-##Gateway
 
-The Gateway provides an 'instance' object allowing interaction with the worker.
-
-##Worker
-
-The Worker defines the code which will be run in a WebWorker, in a separate context.
-All global functions defined here become properties of the 'instance' object.
-
-##Bridge
-
-The Bridge allows you to define accessors/mutators to make theRestOfMyCode available to the Worker.
-Any functions defined within the Bridge are made available within the public scope of the Worker.
-
-
-#Full Example
-
-##Working with Primes
+##Example Working with Primes
 
 	<!doctype html>
 	<html>
@@ -100,4 +87,54 @@ Any functions defined within the Bridge are made available within the public sco
 		</head>
 	</html>
 
+
+## Example without Comments
+
+	<!doctype html>
+	<html>
+		<head>
+		  <script type="text/javascript" src="WorkerJS.js"></script>
+		  <script type="text/javascript">
+		    var primes=[];
+		    var finished = false;
+		    
+		    $WorkerJS({ // TLDR; Functions we want to push into the Worker scope.
+		      addPrime: function(somePrime) {
+		        primes.push(somePrime);
+		      },
+		      getPrimes: function() {
+		        this.callback(primes);
+		      }
+		    }, function() { // TLDR; Definition of the Worker.
+		      function findPrimesBetween(a, b) {
+		        log("Searching for primes between", a, "and", b);
+		        
+		        for (var i=a; i<b; i++) {
+		          var prime = true;
+		          for (var j=2; j<i; j++) {
+		            if ( (i%j) == 0 ) {
+		              prime = false;
+		              break;
+		            }
+		          }
+		          if (prime) addPrime(i);
+		        }
+		        this.callback({ result: "success" });
+		      };
+		    }, function(instance) { // TLDR; Interacting with the Worker.
+		      instance.findPrimesBetween(2, 1000000, function(result) {
+		        console.log("Primes between 2 and 100:", primes);
+		        finished = true;
+		      });
+		    });
+		    
+		    // This demonstrates the parallel nature of this demo.
+		    var checkProgress = function() {
+		      console.log("Found", primes.length, "primes");
+		      if (!finished) setTimeout(checkProgress, 1000);
+		    };
+		    checkProgress();
+		  </script>
+		</head>
+	</html>
 

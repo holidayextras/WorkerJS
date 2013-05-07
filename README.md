@@ -9,7 +9,7 @@ WorkerJS makes it easy to write lightweight, concise, concurrent Javascript.
 <script type="text/javascript">
 	var theRestOfMyCode;
 	
-	$WorkerJS({
+	WorkerJS({
 	  // This is the 'Bridge'
 	  // Functions defined here become global functions in the Worker.
 	  // Functions defined here should sync data between Worker <--> theRestOfMyCode.
@@ -36,7 +36,7 @@ WorkerJS makes it easy to write lightweight, concise, concurrent Javascript.
 	    var primes=[];
 	    var finished = false;
 	    
-	    $WorkerJS({ // TLDR; Functions we want to push into the Worker.
+	    WorkerJS({ // TLDR; Functions we want to push into the Worker.
 	      // 1. This is the 'Bridge'.
 	      // 2. Any functions put into this object will be available as globals in the Worker.
 	      // 3. All functions have this.callback which communicates data back into the Worker.
@@ -101,7 +101,7 @@ WorkerJS makes it easy to write lightweight, concise, concurrent Javascript.
 	    var primes=[];
 	    var finished = false;
 	    
-	    $WorkerJS({ // TLDR; Functions we want to push into the Worker scope.
+	    WorkerJS({ // TLDR; Functions we want to push into the Worker scope.
 	      addPrime: function(somePrime) {
 	        primes.push(somePrime);
 	      },

@@ -79,7 +79,7 @@ var checkProgress = function() {
 checkProgress();
 ```
 
-## Example without Comments
+## Cleaner Example
 
 ```javascript
 var primes=[];

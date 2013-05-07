@@ -4,37 +4,44 @@
 	  <script type="text/javascript" src="./WorkerJS.js"></script>
 	  <script type="text/javascript">
 	    var primes=[];
+	    var unit = 1;
 	    var finished = false;
 	    
 	    WorkerJS({ // TLDR; Functions we want to push into the Worker scope.
 	      addPrime: function(somePrime) {
 	        primes.push(somePrime);
 	      },
-	      getPrimes: function() {
-	        this.callback(primes);
+	      getUnit: function() {
+	        this.callback(unit++);
 	      }
 	    }, function() { // TLDR; Definition of the Worker.
-	      function findPrimesBetween(a, b) {
-	        log("Searching for primes between", a, "and", b);
+	      function testIfPrime() {
+	        log("Worker testing if prime...");
+	        var self = this;
 	        
-	        for (var i=a; i<b; i++) {
-	          var prime = true;
-	          for (var j=2; j<i; j++) {
-	            if ( (i%j) == 0 ) {
-	              prime = false;
-	              break;
+	        var processNextUnit = function() {
+	          getUnit(function(i) {
+	            if (i>100000) return self.callback();
+	            var prime = true;
+	            for (var j=2; j<i; j++) {
+	              if ( (i%j) == 0 ) {
+	                prime = false;
+	                break;
+	              }
 	            }
-	          }
-	          if (prime) addPrime(i);
-	        }
-	        this.callback({ result: "success" });
+	            if (prime) addPrime(i);
+	            return processNextUnit();
+	          });
+	        };
+	        processNextUnit();
 	      };
-	    }, function(instance) { // TLDR; Interacting with the Worker.
-	      instance.findPrimesBetween(2, 1000000, function(result) {
-	        console.log("Primes between 2 and 1000000:", primes);
+	    }, function(instances) { // TLDR; Interacting with the Worker(s).
+	      console.log("Starting...");
+	      instances.testIfPrime(function(result) {
+	        console.log("Done!", primes);
 	        finished = true;
 	      });
-	    });
+	    }, 7);
 	    
 	    // This demonstrates the parallel nature of this demo.
 	    var checkProgress = function() {

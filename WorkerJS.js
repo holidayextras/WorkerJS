@@ -134,7 +134,7 @@ WorkerJS = (function() {
         var funcs = e.data._init;
         for (var prop in funcs) {
           (function setProperty(name){
-            instance[name] = function(data, callback) {
+            instance[name] = function() {
               var args = Array.prototype.slice.call(arguments);
               var callback = function() { };
               if ((args.length>0) && typeof args[args.length-1] == "function") {
@@ -203,5 +203,52 @@ WorkerJS = (function() {
   //
   // Export all our hard work
   //
-  return WorkerJS;
+  return function(bridgeFunctions, workerCode, gatewayFunction, totalInstances) {
+    totalInstances = totalInstances || 1;
+    var runningInstances = [];
+    
+    var sharedGatewayFunction = function(instance) {
+      runningInstances.push(instance);
+      //
+      // Once all Workers have reported in, callback into the Gateway
+      //
+      if (runningInstances.length == (totalInstances-1)) {
+        var newInstance = { };
+        for (var prop in instance) {
+          (function recreateProperty(prop) {
+            newInstance[prop] = function() {
+              var args = Array.prototype.slice.call(arguments);
+              var queue = [];
+              var callback = function() { };
+              if ((args.length>0) && typeof args[args.length-1] == "function") {
+                callback = args.pop();
+              }
+              //
+              // Insert custom callback
+              //
+              args.push(function() {
+                queue.push(arguments);
+                if (queue.length == (totalInstances-1)) {
+                  callback(queue);
+                }
+              });
+              //
+              // Invoke the function on all Worker instances
+              //
+              runningInstances.forEach(function(instance) {
+                instance[prop].apply(instance, args);
+              });
+            };
+          })(prop);
+        }
+      
+        gatewayFunction(newInstance);
+      }
+    };
+    
+    for (var i=0; i<totalInstances; i++) {
+      if (i>10) break;
+      WorkerJS(bridgeFunctions, workerCode, sharedGatewayFunction);
+    }
+  };
 })();

@@ -207,33 +207,40 @@ WorkerJS = (function() {
     totalInstances = totalInstances || 1;
     var runningInstances = [];
     
+    //
+    // Every Worker will call this next function. Each one will register 
+    // with the runningInstances array, the final one will create the new
+    // 'instance' object which allow the Gateway to interact with every
+    // worker simultaneously.
+    //
     var sharedGatewayFunction = function(instance) {
       runningInstances.push(instance);
       //
       // Once all Workers have reported in, callback into the Gateway
       //
-      if (runningInstances.length == (totalInstances-1)) {
+      if (runningInstances.length == totalInstances) {
         var newInstance = { };
         for (var prop in instance) {
           (function recreateProperty(prop) {
             newInstance[prop] = function() {
               var args = Array.prototype.slice.call(arguments);
               var queue = [];
+              //
+              // Grab the correct callback and replace it with our Barrier. This
+              // will only callback when all Worker instances have returned.
+              //
               var callback = function() { };
               if ((args.length>0) && typeof args[args.length-1] == "function") {
                 callback = args.pop();
               }
-              //
-              // Insert custom callback
-              //
               args.push(function() {
                 queue.push(arguments);
-                if (queue.length == (totalInstances-1)) {
+                if (queue.length == totalInstances) {
                   callback(queue);
                 }
               });
               //
-              // Invoke the function on all Worker instances
+              // Invoke the requested function on all Worker instances
               //
               runningInstances.forEach(function(instance) {
                 instance[prop].apply(instance, args);
@@ -241,12 +248,18 @@ WorkerJS = (function() {
             };
           })(prop);
         }
-      
+        
+        //
+        // Only one instance of the Gateway will run.
+        //
         gatewayFunction(newInstance);
       }
     };
     
-    for (var i=0; i<totalInstances; i++) {
+    //
+    // Spawn the desired number of Workers.
+    //
+    for (var i=0; i<=totalInstances; i++) {
       if (i>10) break;
       WorkerJS(bridgeFunctions, workerCode, sharedGatewayFunction);
     }

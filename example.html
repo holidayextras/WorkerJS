@@ -16,12 +16,12 @@
 	      }
 	    }, function() { // TLDR; Definition of the Worker.
 	      function testIfPrime() {
-	        log("Worker testing if prime...");
+	        log("Worker starting up...");
 	        var self = this;
 	        
 	        var processNextUnit = function() {
 	          getUnit(function(i) {
-	            if (i>100000) return self.callback();
+	            if (i>100000) return self.callback("Success");
 	            var prime = true;
 	            for (var j=2; j<i; j++) {
 	              if ( (i%j) == 0 ) {
@@ -36,9 +36,9 @@
 	        processNextUnit();
 	      };
 	    }, function(instances) { // TLDR; Interacting with the Worker(s).
-	      console.log("Starting...");
+	      console.log("Gateway has been called.");
 	      instances.testIfPrime(function(result) {
-	        console.log("Done!", primes);
+	        console.log("Gateway callback - Done!", primes, result);
 	        finished = true;
 	      });
 	    }, 7);

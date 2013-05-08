@@ -41,7 +41,7 @@
 	        console.log("Gateway callback - Done!", primes, result);
 	        finished = true;
 	      });
-	    }, 7);
+	    }, { workerCount: 7 });
 	    
 	    // This demonstrates the parallel nature of this demo.
 	    var checkProgress = function() {

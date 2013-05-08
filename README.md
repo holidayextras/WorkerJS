@@ -18,6 +18,15 @@ WorkerJS({
 }, function(instance) {
   // This is the 'Gateway', it allows interaction with the Worker.
   // Functions defined in the Worker become properties of the 'instance' object.
+  // This function will only be invoked once.
+  // Invoking a function on the 'instance' object will call the function on the Worker.
+  // If the workerCount in the options is greater than 1, invoking a function on the
+  // 'instance' will call the function on every Worker - if there is a callback to
+  // the function it will only be invoked once, and only when EVERY worker's function
+  // has invoked it's callback.
+}, {
+  // Options. This parameter isn't required, if omitted the workerCount defaults to 1.
+  workerCount: 1
 });
 ```
 
@@ -36,9 +45,6 @@ WorkerJS({ // TLDR; Functions we want to push into the Worker.
   addPrime: function(somePrime) {
     primes.push(somePrime);
   },
-  getPrimes: function() {
-    this.callback(primes);
-  }
 }, function() { // TLDR; Definition of the Worker.
   // 1. This is the 'Worker'.
   // 2. This is the code which runs in parallel, in a totally separate WebWorker scope. 
@@ -66,7 +72,7 @@ WorkerJS({ // TLDR; Functions we want to push into the Worker.
   // 2. 'instance' has a property for each function defined in the Worker.
   // 3. Each function defined in the Worker gains an additional callback parameter.
   instance.findPrimesBetween(2, 1000000, function(result) {
-    console.log("Primes between 2 and 100:", primes);
+    console.log("Primes between 2 and 1000000:", primes);
     finished = true;
   });
 });
@@ -79,41 +85,52 @@ var checkProgress = function() {
 checkProgress();
 ```
 
-## Cleaner Example
+## More Effective Example
+
+This example uses 7 workers to get the job done much MUCH faster. If you run this example you'll see that the Gateway only gets invoked once, and calling instances.testIfPrime() invokes the function on each of the 7 requested workers. The callback fires once all 7 worker's functions callback. The Bridge allows each Worker to request work units from main thread and write their output back to the main thread. Pretty neat.
 
 ```javascript
 var primes=[];
+var unit = 1;
 var finished = false;
 
 WorkerJS({ // TLDR; Functions we want to push into the Worker scope.
   addPrime: function(somePrime) {
     primes.push(somePrime);
   },
-  getPrimes: function() {
-    this.callback(primes);
+  getUnit: function() {
+    this.callback(unit++);
   }
 }, function() { // TLDR; Definition of the Worker.
-  function findPrimesBetween(a, b) {
-    log("Searching for primes between", a, "and", b);
+  function testIfPrime() {
+    log("Worker starting up...");
+    var self = this;
     
-    for (var i=a; i<b; i++) {
-      var prime = true;
-      for (var j=2; j<i; j++) {
-        if ( (i%j) == 0 ) {
-          prime = false;
-          break;
+    var processNextUnit = function() {
+      getUnit(function(i) {
+        if (i>100000) return self.callback("Success");
+        var prime = true;
+        for (var j=2; j<i; j++) {
+          if ( (i%j) == 0 ) {
+            prime = false;
+            break;
+          }
         }
-      }
-      if (prime) addPrime(i);
-    }
-    this.callback({ result: "success" });
+        if (prime) addPrime(i);
+        return processNextUnit();
+      });
+    };
+    processNextUnit();
   };
-}, function(instance) { // TLDR; Interacting with the Worker.
-  instance.findPrimesBetween(2, 1000000, function(result) {
-    console.log("Primes between 2 and 100:", primes);
+}, function(instances) { // TLDR; Interacting with the Worker(s).
+  console.log("Gateway has been called.");
+  // Calling testIfPrime() will invoke the function on all 7 Workers at the same time
+  instances.testIfPrime(function(result) {
+    // This callback will be invoked when all 7 Workers have invoked their callbacks.
+    console.log("Gateway callback - Done!", primes, result);
     finished = true;
   });
-});
+}, { workerCount: 7 });
 
 // This demonstrates the parallel nature of this demo.
 var checkProgress = function() {

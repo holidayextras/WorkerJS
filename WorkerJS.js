@@ -204,7 +204,7 @@ WorkerJS = (function() {
   // Export all our hard work
   //
   return function(bridgeFunctions, workerCode, gatewayFunction, totalInstances) {
-    totalInstances = totalInstances || 1;
+    totalInstances = totalInstances.workerCount || 1;
     var runningInstances = [];
     
     //

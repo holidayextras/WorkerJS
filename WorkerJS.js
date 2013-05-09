@@ -103,6 +103,9 @@ WorkerJS = (function() {
     var token = 1;
     var queue = {};
     var instance = { };
+    instance.terminate = function() {
+      worker.terminate();
+    };
     //
     // These are two helper functions to allow workers to perform console.log
     // and console.warn without any extra effort. Great for debugging.
@@ -201,9 +204,10 @@ WorkerJS = (function() {
   };
   
   //
-  // Export all our hard work
+  // Allow us to spawn multiple Workers in a cluster, it should appear to the user
+  // as a single worker, only much much faster.
   //
-  return function(bridgeFunctions, workerCode, gatewayFunction, totalInstances) {
+  var spawnMultipleWorkers = function(bridgeFunctions, workerCode, gatewayFunction, totalInstances) {
     totalInstances = totalInstances.workerCount || 1;
     var runningInstances = [];
     
@@ -249,6 +253,12 @@ WorkerJS = (function() {
           })(prop);
         }
         
+        newInstance.end = function() {
+          for (var i=0; i<runningInstances.length; i++) {
+            runningInstances[i].terminate();
+          }
+        };
+        
         //
         // Only one instance of the Gateway will run.
         //
@@ -259,9 +269,91 @@ WorkerJS = (function() {
     //
     // Spawn the desired number of Workers.
     //
-    for (var i=0; i<=totalInstances; i++) {
-      if (i>10) break;
-      WorkerJS(bridgeFunctions, workerCode, sharedGatewayFunction);
+    if (typeof totalInstances == "number") {
+      for (var i=0; i<=totalInstances; i++) {
+        WorkerJS(bridgeFunctions, workerCode, sharedGatewayFunction);
+      }
+    } else if (totalInstances == "max") {
+      console.log("Computing most effective number of workers...");
+      computeMaxWorkers(function(maxWorkers) {
+        console.log("Starting", maxWorkers, "workers");
+        totalInstances = maxWorkers;
+        for (var i=0; i<=totalInstances; i++) {
+          WorkerJS(bridgeFunctions, workerCode, sharedGatewayFunction);
+        }
+      });
+    } else {
+      console.error("How many workers?!", totalInstances, "is not recognised...");
     }
   };
+  
+  //
+  // Work out how many workers are the most efficient
+  //
+  function computeMaxWorkers(callback) {
+    var workerCount = 1;
+    var duration = 9999;
+    var difficulty = 1000; 
+    
+    function tryNext() {
+      benchmark(workerCount, difficulty, function(time) {
+        if ((time < duration) && ((duration/time) > 1.1)) {
+          duration = time; workerCount++;
+          if (time < 1000) {
+            difficulty *= 2; duration *= 2;
+          }
+          return tryNext();
+        } else {
+          return callback(workerCount);
+        }
+      });
+    };
+    tryNext();
+  };
+  
+  //
+  // Stress Tester
+  //
+  function benchmark(workerCount, difficulty, callback) {
+    var unit = 1;
+    spawnMultipleWorkers({
+      getUnit: function() {
+        this.callback(unit++);
+      },
+      getDifficulty: function() {
+        this.callback(difficulty);
+      }
+    }, function() {
+      function testIfPrime() {
+        var self = this;
+        var processNextUnit = function() {
+          getUnit(function(i) {
+            getDifficulty(function(difficulty) {
+              if (i>difficulty) return self.callback("Success");
+              var prime = true;
+              for (var j=2; j<10001; j++) { // this is a semiprime
+                if ( (10001%j) == 0 ) {
+                  prime = false;
+                }
+              }
+              return processNextUnit();
+            });
+          });
+        };
+        processNextUnit();
+      };
+    }, function(instances) {
+      var now = new Date();
+      instances.testIfPrime(function(result) {
+        instances.end();
+        callback((new Date())-now);
+      });
+    }, { workerCount: workerCount });
+  };
+  
+  //
+  // Export all our hard work
+  //
+  return spawnMultipleWorkers;
 })();
+

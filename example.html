@@ -16,12 +16,11 @@
 	      }
 	    }, function() { // TLDR; Definition of the Worker.
 	      function testIfPrime() {
-	        log("Worker starting up...");
 	        var self = this;
 	        
 	        var processNextUnit = function() {
 	          getUnit(function(i) {
-	            if (i>100000) return self.callback("Success");
+	            if (i>200000) return self.callback("Success");
 	            var prime = true;
 	            for (var j=2; j<i; j++) {
 	              if ( (i%j) == 0 ) {
@@ -37,18 +36,20 @@
 	      };
 	    }, function(instances) { // TLDR; Interacting with the Worker(s).
 	      console.log("Gateway has been called.");
+	      
+	      var now = new Date();
+	      var checkProgress = function() {
+	        console.log("Found", primes.length, "primes");
+	        if (!finished) setTimeout(checkProgress, 1000);
+	      };
+	      checkProgress();
+	      
 	      instances.testIfPrime(function(result) {
 	        console.log("Gateway callback - Done!", primes, result);
+	        console.log("Duration:", (new Date())-now, "ms");
 	        finished = true;
 	      });
-	    }, { workerCount: 7 });
-	    
-	    // This demonstrates the parallel nature of this demo.
-	    var checkProgress = function() {
-	      console.log("Found", primes.length, "primes");
-	      if (!finished) setTimeout(checkProgress, 1000);
-	    };
-	    checkProgress();
+	    }, { workerCount: "max" });
 	  </script>
 	</head>
 </html>

@@ -90,7 +90,7 @@ checkProgress();
 
 ## More Effective Example
 
-This example uses a cluster workers to get the job done much MUCH faster. If you run this example you'll see it run a quick benchmark to determine how many workers the browser can effectively use - it will then spawn that many workers in a cluster. The Gateway only gets invoked once, and calling instances.testIfPrime() invokes the function on each of the clustered workers. The callback fires once all the worker's functions callback. The Bridge allows each Worker to request work units from main thread and write their output back to the main thread. Pretty neat.
+This example uses a cluster of workers to get the job done much MUCH faster. If you run this example you'll see it run a quick benchmark to determine how many workers the browser can effectively use - it will then spawn that many workers in a cluster. The Gateway only gets invoked once, and calling instances.testIfPrime() invokes the function on each of the clustered workers. The callback fires once all the worker's functions callback. The Bridge allows each Worker to request work units from main thread and write their output back to the main thread. Pretty neat.
 
 ```javascript
 var primes=[];
@@ -140,5 +140,36 @@ WorkerJS({ // TLDR; Functions we want to push into the Worker scope.
     finished = true;
   });
 }, { workerCount: -1 });
+```
+Sample Console Output:
+```
+Computing most effective number of workers... 
+Benchmark [ 1 ] 258 ms - 29 units
+Benchmark [ 2 ] 260 ms - 61 units
+Benchmark [ 3 ] 261 ms - 91 units
+Benchmark [ 4 ] 260 ms - 133 units
+Benchmark [ 5 ] 258 ms - 163 units
+Benchmark [ 6 ] 258 ms - 219 units
+Benchmark [ 7 ] 260 ms - 276 units
+Benchmark [ 8 ] 262 ms - 303 units
+Benchmark [ 9 ] 259 ms - 348 units
+Benchmark [ 10 ] 261 ms - 426 units
+Benchmark [ 11 ] 260 ms - 415 units
+Starting 10 workers
+Gateway has been called.
+Found 0 primes
+Found 2541 primes 
+Found 4755 primes 
+Found 6680 primes 
+Found 8623 primes 
+Found 10464 primes 
+Found 12190 primes 
+Found 13872 primes 
+Found 15462 primes 
+Found 16985 primes 
+Gateway callback - Done! 
+[3, 2, 5, 7, 1, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 127, 131, 137, 139, 149, 151, 157, 163, 167, 173, 179, 181, 191, 193, 197, 199, 211, 223, 227, 229, 233, 239, 241, 251, 257, 263, 269, 271, 277, 281, 283, 293, 307, 311, 313, 317, 331, 337, 347, 349, 353, 359, 367, 373, 379, 383, 389, 397, 401, 409, 419, 421, 431, 433, 439, 443, 449, 457, 461, 463, 467, 479, 487, 491, 499, 503, 509, 521, 523…]
+Duration: 9691 ms
+Found 17985 primes 
 ```
 

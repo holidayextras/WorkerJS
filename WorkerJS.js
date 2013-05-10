@@ -292,19 +292,16 @@ WorkerJS = (function() {
   //
   function computeMaxWorkers(callback) {
     var workerCount = 1;
-    var duration = 9999;
-    var difficulty = 1000; 
+    var maxNumbers = 1;
     
     function tryNext() {
-      benchmark(workerCount, difficulty, function(time) {
-        if ((time < duration) && ((duration/time) > 1.1)) {
-          duration = time; workerCount++;
-          if (time < 1000) {
-            difficulty *= 2; duration *= 2;
-          }
+      benchmark(workerCount, function(time, count) {
+        console.log("Benchmark [", workerCount, "]", time, "ms -", count, "units");
+        if ((time < 275) && (count > maxNumbers)) {
+          maxNumbers = count; workerCount++;
           return tryNext();
         } else {
-          return callback(workerCount);
+          return callback(workerCount-1);
         }
       });
     };
@@ -314,39 +311,30 @@ WorkerJS = (function() {
   //
   // Stress Tester
   //
-  function benchmark(workerCount, difficulty, callback) {
-    var unit = 1;
-    spawnMultipleWorkers({
-      getUnit: function() {
-        this.callback(unit++);
-      },
-      getDifficulty: function() {
-        this.callback(difficulty);
-      }
-    }, function() {
-      function testIfPrime() {
+  function benchmark(workerCount, callback) {
+    spawnMultipleWorkers({ }, function() {
+      function startCounting() {
+        var done = false, i = 0;
         var self = this;
-        var processNextUnit = function() {
-          getUnit(function(i) {
-            getDifficulty(function(difficulty) {
-              if (i>difficulty) return self.callback("Success");
-              var prime = true;
-              for (var j=2; j<10001; j++) { // this is a semiprime
-                if ( (10001%j) == 0 ) {
-                  prime = false;
-                }
-              }
-              return processNextUnit();
-            });
-          });
-        };
-        processNextUnit();
+        
+        setTimeout(function() { done = true; }, 250);
+        
+        var it = function() {
+          if (done) return self.callback(i);
+          i++;
+          for (var j=0; j<1000; j++) { }
+          setTimeout(it, 0);
+        }; it();
       };
     }, function(instances) {
       var now = new Date();
-      instances.testIfPrime(function(result) {
+      instances.startCounting(function(result) {
         instances.end();
-        callback((new Date())-now);
+        var total = 0;
+        for (var i=0; i<result.length; i++) {
+          total += result[i][0];
+        }
+        callback((new Date())-now, total);
       });
     }, { workerCount: workerCount });
   };

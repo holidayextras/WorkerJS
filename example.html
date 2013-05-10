@@ -1,55 +1,55 @@
 <!doctype html>
 <html>
-	<head>
-	  <script type="text/javascript" src="./WorkerJS.js"></script>
-	  <script type="text/javascript">
-	    var primes=[];
-	    var unit = 1;
-	    var finished = false;
-	    
-	    WorkerJS({ // TLDR; Functions we want to push into the Worker scope.
-	      addPrime: function(somePrime) {
-	        primes.push(somePrime);
-	      },
-	      getUnit: function() {
-	        this.callback(unit++);
-	      }
-	    }, function() { // TLDR; Definition of the Worker.
-	      function testIfPrime() {
-	        var self = this;
-	        
-	        var processNextUnit = function() {
-	          getUnit(function(i) {
-	            if (i>200000) return self.callback("Success");
-	            var prime = true;
-	            for (var j=2; j<i; j++) {
-	              if ( (i%j) == 0 ) {
-	                prime = false;
-	                break;
-	              }
-	            }
-	            if (prime) addPrime(i);
-	            return processNextUnit();
-	          });
-	        };
-	        processNextUnit();
-	      };
-	    }, function(instances) { // TLDR; Interacting with the Worker(s).
-	      console.log("Gateway has been called.");
-	      
-	      var now = new Date();
-	      var checkProgress = function() {
-	        console.log("Found", primes.length, "primes");
-	        if (!finished) setTimeout(checkProgress, 1000);
-	      };
-	      checkProgress();
-	      
-	      instances.testIfPrime(function(result) {
-	        console.log("Gateway callback - Done!", primes, result);
-	        console.log("Duration:", (new Date())-now, "ms");
-	        finished = true;
-	      });
-	    }, { workerCount: "max" });
-	  </script>
-	</head>
+  <head>
+    <script type="text/javascript" src="./WorkerJS.js"></script>
+    <script type="text/javascript">
+      var primes=[];
+      var unit = 1;
+      var finished = false;
+      
+      WorkerJS({ // TLDR; Functions we want to push into the Worker scope.
+        addPrime: function(somePrime) {
+          primes.push(somePrime);
+        },
+        getUnit: function() {
+          this.callback(unit++);
+        }
+      }, function() { // TLDR; Definition of the Worker.
+        function testIfPrime() {
+          var self = this;
+          
+          var processNextUnit = function() {
+            getUnit(function(i) {
+              if (i>200000) return self.callback("Success");
+              var prime = true;
+              for (var j=2; j<i; j++) {
+                if ( (i%j) == 0 ) {
+                  prime = false;
+                  break;
+                }
+              }
+              if (prime) addPrime(i);
+              return processNextUnit();
+            });
+          };
+          processNextUnit();
+        };
+      }, function(instances) { // TLDR; Interacting with the Worker(s).
+        console.log("Gateway has been called.");
+        
+        var now = new Date();
+        var checkProgress = function() {
+          console.log("Found", primes.length, "primes");
+          if (!finished) setTimeout(checkProgress, 1000);
+        };
+        checkProgress();
+        
+        instances.testIfPrime(function(result) {
+          console.log("Gateway callback - Done!", primes, result);
+          console.log("Duration:", (new Date())-now, "ms");
+          finished = true;
+        });
+      }, { workerCount: "max" });
+    </script>
+  </head>
 </html>

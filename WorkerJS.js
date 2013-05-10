@@ -269,11 +269,11 @@ WorkerJS = (function() {
     //
     // Spawn the desired number of Workers.
     //
-    if (typeof totalInstances == "number") {
+    if (totalInstances > 0) {
       for (var i=0; i<=totalInstances; i++) {
         WorkerJS(bridgeFunctions, workerCode, sharedGatewayFunction);
       }
-    } else if (totalInstances == "max") {
+    } else if (totalInstances == -1) {
       console.log("Computing most effective number of workers...");
       computeMaxWorkers(function(maxWorkers) {
         console.log("Starting", maxWorkers, "workers");

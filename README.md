@@ -26,6 +26,8 @@ WorkerJS({
   // has invoked it's callback.
 }, {
   // Options. This parameter isn't required, if omitted the workerCount defaults to 1.
+  // Setting workerCount to (-1) will start a benchmark to determine the most effective
+  // number of workers the browser can handle, then proceed with that number.
   workerCount: 1
 });
 ```
@@ -103,12 +105,11 @@ WorkerJS({ // TLDR; Functions we want to push into the Worker scope.
   }
 }, function() { // TLDR; Definition of the Worker.
   function testIfPrime() {
-    log("Worker starting up...");
     var self = this;
     
     var processNextUnit = function() {
       getUnit(function(i) {
-        if (i>100000) return self.callback("Success");
+        if (i>200000) return self.callback("Success");
         var prime = true;
         for (var j=2; j<i; j++) {
           if ( (i%j) == 0 ) {
@@ -124,19 +125,19 @@ WorkerJS({ // TLDR; Functions we want to push into the Worker scope.
   };
 }, function(instances) { // TLDR; Interacting with the Worker(s).
   console.log("Gateway has been called.");
-  // Calling testIfPrime() will invoke the function on all 7 Workers at the same time
+  
+  var checkProgress = function() {
+    console.log("Found", primes.length, "primes");
+    if (!finished) setTimeout(checkProgress, 1000);
+  };
+  checkProgress();
+  
+  var now = new Date();
   instances.testIfPrime(function(result) {
-    // This callback will be invoked when all 7 Workers have invoked their callbacks.
     console.log("Gateway callback - Done!", primes, result);
+    console.log("Duration:", (new Date())-now, "ms");
     finished = true;
   });
-}, { workerCount: 7 });
-
-// This demonstrates the parallel nature of this demo.
-var checkProgress = function() {
-  console.log("Found", primes.length, "primes");
-  if (!finished) setTimeout(checkProgress, 1000);
-};
-checkProgress();
+}, { workerCount: -1 });
 ```
 

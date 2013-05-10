@@ -2,7 +2,13 @@
 
 TLDR; WorkerJS makes it easy to write lightweight, concise, concurrent Javascript.
 
-The idea is simple - use the main Javascript thread for shared memory and interprocess communication. WorkerJS makes it very easy to push functions from the main Javascript thread into a Worker by converting the webworker message passing interface into an RPC style interface. WorkerJS makes it very easy to pull Worker functionality back out into the main Javascript thread, exposing Worker functionality as RPC functions on an object. WorkerJS allows easy clustering of many Workers - all the Workers in a cluster appear as a single object, invoking a function on the cluster will send the request to every Worker in the cluster and the callback will fire when every Worker in the cluster has finished. WorkerJS will even benchmark our browser to determine the most effective number of Workers to spawn in order to maximise throughput.
+WorkerJS makes it very easy to push functions from the main Javascript thread into a Worker by converting the webworker message passing interface into an RPC style interface. 
+
+WorkerJS makes it very easy to pull Worker functionality back out into the main Javascript thread, exposing Worker functionality as RPC functions on an object. 
+
+WorkerJS allows easy clustering of many Workers - all the Workers in a cluster appear as a single object, invoking a function on the cluster will send the request to every Worker in the cluster and the callback will fire when every Worker in the cluster has finished. 
+
+WorkerJS will even benchmark our browser to determine the most effective number of Workers to spawn in order to maximise throughput.
 
 ##Overview
 

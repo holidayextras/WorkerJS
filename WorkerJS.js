@@ -296,7 +296,7 @@ WorkerJS = (function() {
     
     function tryNext() {
       benchmark(workerCount, function(time, count) {
-        console.log("Benchmark [", workerCount, "]", time, "ms -", count, "units");
+        console.log("Benchmark [", workerCount, "workers ] ", time, "ms -", count, "units processed");
         if ((time < 275) && (count > maxNumbers)) {
           maxNumbers = count; workerCount++;
           return tryNext();

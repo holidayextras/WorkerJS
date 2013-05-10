@@ -144,17 +144,17 @@ WorkerJS({ // TLDR; Functions we want to push into the Worker scope.
 Sample Console Output:
 ```
 Computing most effective number of workers... 
-Benchmark [ 1 ] 258 ms - 29 units
-Benchmark [ 2 ] 260 ms - 61 units
-Benchmark [ 3 ] 261 ms - 91 units
-Benchmark [ 4 ] 260 ms - 133 units
-Benchmark [ 5 ] 258 ms - 163 units
-Benchmark [ 6 ] 258 ms - 219 units
-Benchmark [ 7 ] 260 ms - 276 units
-Benchmark [ 8 ] 262 ms - 303 units
-Benchmark [ 9 ] 259 ms - 348 units
-Benchmark [ 10 ] 261 ms - 426 units
-Benchmark [ 11 ] 260 ms - 415 units
+Benchmark [ 1 workers ] 258 ms - 29 units processed
+Benchmark [ 2 workers ] 260 ms - 61 units processed
+Benchmark [ 3 workers ] 261 ms - 91 units processed
+Benchmark [ 4 workers ] 260 ms - 133 units processed
+Benchmark [ 5 workers ] 258 ms - 163 units processed
+Benchmark [ 6 workers ] 258 ms - 219 units processed
+Benchmark [ 7 workers ] 260 ms - 276 units processed
+Benchmark [ 8 workers ] 262 ms - 303 units processed
+Benchmark [ 9 workers ] 259 ms - 348 units processed
+Benchmark [ 10 workers ] 261 ms - 426 units processed
+Benchmark [ 11 workers ] 260 ms - 415 units processed
 Starting 10 workers
 Gateway has been called.
 Found 0 primes

@@ -12,8 +12,9 @@ WorkerJS({
   // Functions defined here become global functions in the Worker.
   // Functions defined here should sync data between Worker <--> theRestOfMyCode.
 }, function() { 
-  // This is the 'Worker', it runs in a WebWorker (in a separate context).
-  // Functions defined in the Bridge exist in this global scope.
+  // This is the definition of a 'Worker', it runs in a WebWorker (in a separate context).
+  // Functions defined in the Bridge exist in this global scope, nothing else
+  // outside of this function will be in scope.
   // Functions defined here become properties of the 'instance' object in the Gateway.
 }, function(instance) {
   // This is the 'Gateway', it allows interaction with the Worker.
@@ -47,7 +48,7 @@ WorkerJS({ // TLDR; Functions we want to push into the Worker.
   addPrime: function(somePrime) {
     primes.push(somePrime);
   },
-}, function() { // TLDR; Definition of the Worker.
+}, function() { // TLDR; Definition of a Worker.
   // 1. This is the 'Worker'.
   // 2. This is the code which runs in parallel, in a totally separate WebWorker scope. 
   // 3. Functions defined in the Bridge will be available in this function's global scope.
@@ -89,7 +90,7 @@ checkProgress();
 
 ## More Effective Example
 
-This example uses 7 workers to get the job done much MUCH faster. If you run this example you'll see that the Gateway only gets invoked once, and calling instances.testIfPrime() invokes the function on each of the 7 requested workers. The callback fires once all 7 worker's functions callback. The Bridge allows each Worker to request work units from main thread and write their output back to the main thread. Pretty neat.
+This example uses a cluster workers to get the job done much MUCH faster. If you run this example you'll see it run a quick benchmark to determine how many workers the browser can effectively use - it will then spawn that many workers in a cluster. The Gateway only gets invoked once, and calling instances.testIfPrime() invokes the function on each of the clustered workers. The callback fires once all the worker's functions callback. The Bridge allows each Worker to request work units from main thread and write their output back to the main thread. Pretty neat.
 
 ```javascript
 var primes=[];
@@ -103,7 +104,7 @@ WorkerJS({ // TLDR; Functions we want to push into the Worker scope.
   getUnit: function() {
     this.callback(unit++);
   }
-}, function() { // TLDR; Definition of the Worker.
+}, function() { // TLDR; Definition of a Worker.
   function testIfPrime() {
     var self = this;
     

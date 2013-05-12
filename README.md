@@ -25,7 +25,7 @@ var theRestOfMyCode;
 WorkerJS({
   // This is the 'Bridge'
   // Functions defined here become global functions in the Worker.
-  // Functions defined here should sync data between Worker <--> theRestOfMyCode.
+  // Functions defined here should sync data between Worker <-> theRestOfMyCode.
 }, function() { 
   // This is the 'Worker', it runs in a WebWorker (in a separate context).
   // Functions defined in the Bridge exist in this global scope, nothing else

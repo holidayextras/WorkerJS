@@ -2,7 +2,7 @@
 
 TLDR; WorkerJS makes it easy to write lightweight, concise, concurrent Javascript.
 
-WorkerJS makes it very easy to push functions from the main Javascript thread into a Worker by converting the webworker message passing interface into an RPC style interface. 
+WorkerJS makes it very easy to push functions from the main Javascript thread into the scope of a Worker by converting the webworker message passing interface into an RPC style interface. 
 
 WorkerJS makes it very easy to pull Worker functionality back out into the main Javascript thread, exposing Worker functionality as RPC functions on an object. 
 
@@ -12,6 +12,13 @@ WorkerJS will even benchmark our browser to determine the most effective number 
 
 ##Overview
 
+Let the main Javascript thread become a means for accessing shared memory - workers request interaction with the DOM, shared memory and eachother via the 'Bridge'. It's an object containing a list of functions which are invoked by the main Javascript thread but are accessible by all 'Workers'. The 'Bridge' makes it simple to push data and functionality into the 'Workers'.
+
+On the other side of things is the 'Gateway'. The 'Gateway' makes it easy for the main Javascript thread to request things of the 'Worker'. Functions defined within the 'Worker' are exposed as properties of an 'instance' object (which is passed into the 'Gateway' as a parameter). 
+
+Calling a function on the 'instance' object within the 'Gateway' will cause the 'Worker' to invoke the same function, which can do all it's heavy processing and interact with the main Javascript thread via the functions in the 'Bridge'.
+
+
 ```javascript
 var theRestOfMyCode;
 
@@ -20,23 +27,24 @@ WorkerJS({
   // Functions defined here become global functions in the Worker.
   // Functions defined here should sync data between Worker <--> theRestOfMyCode.
 }, function() { 
-  // This is the definition of a 'Worker', it runs in a WebWorker (in a separate context).
+  // This is the 'Worker', it runs in a WebWorker (in a separate context).
   // Functions defined in the Bridge exist in this global scope, nothing else
   // outside of this function will be in scope.
-  // Functions defined here become properties of the 'instance' object in the Gateway.
+  // Functions defined here become properties of 'instance' in the Gateway.
 }, function(instance) {
   // This is the 'Gateway', it allows interaction with the Worker.
   // Functions defined in the Worker become properties of the 'instance' object.
   // This function will only be invoked once.
-  // Invoking a function on the 'instance' object will call the function on the Worker.
-  // If the workerCount in the options is greater than 1, invoking a function on the
-  // 'instance' will call the function on every Worker - if there is a callback to
-  // the function it will only be invoked once, and only when EVERY worker's function
-  // has invoked it's callback.
+  // Invoking a function on 'instance' will call the function on the Worker.
+  // If the workerCount in the options is greater than 1, invoking a function on
+  // 'instance' will call the function on every Worker, if there is a callback to
+  // the function it will only be invoked once, and only when EVERY worker's 
+  // function has invoked it's callback.
 }, {
-  // Options. This parameter isn't required, if omitted the workerCount defaults to 1.
-  // Setting workerCount to (-1) will start a benchmark to determine the most effective
-  // number of workers the browser can handle, then proceed with that number.
+  // Options. This parameter isn't required, it defaults to 1.
+  // Setting workerCount to (-1) will start a benchmark to determine the most 
+  // effective number of workers the browser can handle, then proceed with that
+  // number.
   workerCount: 1
 });
 ```
@@ -44,25 +52,26 @@ WorkerJS({
 ##Example Working with Primes
 
 ```javascript
-// The goal of this example is to populate this array with a bunch of prime numbers.
+// The goal is to populate this array with a bunch of prime numbers.
+// These variables can be considered shared memory.
 var primes=[];
 var finished = false;
 
 WorkerJS({ // TLDR; Functions we want to push into the Worker.
   // 1. This is the 'Bridge'.
-  // 2. Any functions put into this object will be available as globals in the Worker.
-  // 3. All functions have this.callback which communicates data back into the Worker.
-  // 4. These functions exist in the normal, expected scope.
+  // 2. These functions are used by the Worker to interact with the main thread.
+  // 3. These functions are invoked in the normal main Javascript scope.
+  // 4. All functions have this.callback to send data back into the Worker.
   addPrime: function(somePrime) {
     primes.push(somePrime);
   },
 }, function() { // TLDR; Definition of a Worker.
   // 1. This is the 'Worker'.
-  // 2. This is the code which runs in parallel, in a totally separate WebWorker scope. 
-  // 3. Functions defined in the Bridge will be available in this function's global scope.
-  // 4. Global functions defined in the Worker will become properties in the Gateway.
-  // 5. All functions have this.callback which ferries data back into the main scope.
-  // 6. In addition to the functions in the Bridge, there is 'log' and 'warn' to aid debugging.
+  // 2. This code runs in parallel, in a totally separate WebWorker scope. 
+  // 3. Functions in the Bridge will be available in this global scope.
+  // 4. Functions defined in the Worker will become properties in the Gateway.
+  // 5. All functions have this.callback to send data back into the main scope.
+  // 6. WorkerJS provides the functions 'log' and 'warn' to help with debugging.
   function findPrimesBetween(a, b) {
     log("Searching for primes between", a, "and", b);
     
@@ -81,7 +90,7 @@ WorkerJS({ // TLDR; Functions we want to push into the Worker.
 }, function(instance) { // TLDR; Interacting with the Worker.
   // 1. This is the 'Gateway'.
   // 2. 'instance' has a property for each function defined in the Worker.
-  // 3. Each function defined in the Worker gains an additional callback parameter.
+  // 3. Each function defined in the Worker gains a callback parameter.
   instance.findPrimesBetween(2, 1000000, function(result) {
     console.log("Primes between 2 and 1000000:", primes);
     finished = true;
@@ -176,7 +185,7 @@ Found 13872 primes
 Found 15462 primes 
 Found 16985 primes 
 Gateway callback - Done! 
-[3, 2, 5, 7, 1, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 127, 131, 137, 139, 149, 151, 157, 163, 167, 173, 179, 181, 191, 193, 197, 199, 211, 223, 227, 229, 233, 239, 241, 251, 257, 263, 269, 271, 277, 281, 283, 293, 307, 311, 313, 317, 331, 337, 347, 349, 353, 359, 367, 373, 379, 383, 389, 397, 401, 409, 419, 421, 431, 433, 439, 443, 449, 457, 461, 463, 467, 479, 487, 491, 499, 503, 509, 521, 523…]
+[3, 2, 5, 7, 1, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71…]
 Duration: 9691 ms
 Found 17985 primes 
 ```

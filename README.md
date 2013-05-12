@@ -12,9 +12,9 @@ WorkerJS will even benchmark our browser to determine the most effective number 
 
 ##Overview
 
-Let the main Javascript thread become a means for accessing shared memory - workers request interaction with the DOM, shared memory and eachother via the 'Bridge'. It's an object containing a list of functions which are invoked by the main Javascript thread but are accessible by all 'Workers'. The 'Bridge' makes it simple to push data and functionality into the 'Workers'.
+Let the main Javascript thread become a means for accessing shared memory - workers request interaction with the DOM, shared memory and each other via the 'Bridge'. It's an object containing a list of functions which are invoked by the main Javascript thread but are accessible by all 'Workers'. The 'Bridge' makes it simple to push data and functionality into the 'Workers'.
 
-On the other side of things is the 'Gateway'. The 'Gateway' makes it easy for the main Javascript thread to request things of the 'Worker'. Functions defined within the 'Worker' are exposed as properties of an 'instance' object (which is passed into the 'Gateway' as a parameter). 
+On the other side of things is the 'Gateway'. The 'Gateway' makes it easy for the main Javascript thread to request functionality of the 'Worker'. Functions defined within the 'Worker' are exposed as properties of an 'instance' object (which is passed into the 'Gateway' as a parameter). 
 
 Calling a function on the 'instance' object within the 'Gateway' will cause the 'Worker' to invoke the same function, which can do all it's heavy processing and interact with the main Javascript thread via the functions in the 'Bridge'.
 
@@ -37,11 +37,11 @@ WorkerJS({
   // This function will only be invoked once.
   // Invoking a function on 'instance' will call the function on the Worker.
   // If the workerCount in the options is greater than 1, invoking a function on
-  // 'instance' will call the function on every Worker, if there is a callback to
-  // the function it will only be invoked once, and only when EVERY worker's 
+  // 'instance' will call the function on every Worker, if there is a callback
+  // to the function it will only be invoked once, and only when EVERY worker's
   // function has invoked it's callback.
 }, {
-  // Options. This parameter isn't required, it defaults to 1.
+  // WorkerCount. This parameter isn't required, it defaults to 1.
   // Setting workerCount to (-1) will start a benchmark to determine the most 
   // effective number of workers the browser can handle, then proceed with that
   // number.

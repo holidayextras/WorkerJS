@@ -8,7 +8,7 @@ WorkerJS makes it very easy to pull Worker functionality back out into the main 
 
 WorkerJS allows easy clustering of many Workers - all the Workers in a cluster appear as a single object, invoking a function on the cluster will send the request to every Worker in the cluster and the callback will fire when every Worker in the cluster has finished. 
 
-WorkerJS will even benchmark our browser to determine the most effective number of Workers to spawn in order to maximise throughput.
+WorkerJS can benchmark a users browser to determine the most effective number of Workers to spawn in order to maximise throughput.
 
 ##Overview
 
@@ -39,7 +39,8 @@ WorkerJS({
   // If the workerCount in the options is greater than 1, invoking a function on
   // 'instance' will call the function on every Worker, if there is a callback
   // to the function it will only be invoked once, and only when EVERY worker's
-  // function has invoked it's callback.
+  // function has invoked it's callback. Calling instance.terminate() will kill
+  // the worker(s).
 }, {
   // WorkerCount. This parameter isn't required, it defaults to 1.
   // Setting workerCount to (-1) will start a benchmark to determine the most 
@@ -94,6 +95,7 @@ WorkerJS({ // TLDR; Functions we want to push into the Worker.
   instance.findPrimesBetween(2, 1000000, function(result) {
     console.log("Primes between 2 and 1000000:", primes);
     finished = true;
+    instance.terminate(); // we're done - kill off our worker
   });
 });
 
@@ -155,6 +157,7 @@ WorkerJS({ // TLDR; Functions we want to push into the Worker scope.
     console.log("Gateway callback - Done!", primes, result);
     console.log("Duration:", (new Date())-now, "ms");
     finished = true;
+    instances.terminate();
   });
 }, { workerCount: -1 });
 ```

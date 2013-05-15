@@ -48,6 +48,7 @@
           console.log("Gateway callback - Done!", primes, result);
           console.log("Duration:", (new Date())-now, "ms");
           finished = true;
+          instances.terminate();
         });
       }, { workerCount: -1 });
     </script>

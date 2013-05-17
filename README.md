@@ -1,6 +1,6 @@
 ##Introduction
 
-TLDR; WorkerJS makes it easy to write lightweight, concise, concurrent Javascript.
+TLDR; WorkerJS makes it easy to write lightweight, concise, concurrent, clustered Javascript.
 
 WorkerJS makes it very easy to push functions from the main Javascript thread into the scope of a Worker by converting the webworker message passing interface into an RPC style interface. 
 

@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+    <meta charset='utf-8' />
+    <meta http-equiv="X-UA-Compatible" content="chrome=1" />
+    <meta name="description" content="WorkerJS : Making concurrent Javascript easier" />
+
+    <link rel="stylesheet" type="text/css" media="screen" href="stylesheets/stylesheet.css">
+
+    <title>WorkerJS</title>
+  </head>
+
+  <body>
+
+    <!-- HEADER -->
+    <div id="header_wrap" class="outer">
+        <header class="inner">
+          <a id="forkme_banner" href="https://github.com/holidayextras/WorkerJS">View on GitHub</a>
+
+          <h1 id="project_title">WorkerJS</h1>
+          <h2 id="project_tagline">Making concurrent Javascript easier</h2>
+
+            <section id="downloads">
+              <a class="zip_download_link" href="https://github.com/holidayextras/WorkerJS/zipball/master">Download this project as a .zip file</a>
+              <a class="tar_download_link" href="https://github.com/holidayextras/WorkerJS/tarball/master">Download this project as a tar.gz file</a>
+            </section>
+        </header>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div id="main_content_wrap" class="outer">
+      <section id="main_content" class="inner">
+        <h2>Introduction</h2>
+
+<p>TLDR; WorkerJS makes it easy to write lightweight, concise, concurrent, clustered Javascript.</p>
+
+<p>WorkerJS makes it very easy to push functions from the main Javascript thread into the scope of a Worker by converting the webworker message passing interface into an RPC style interface. </p>
+
+<p>WorkerJS makes it very easy to pull Worker functionality back out into the main Javascript thread, exposing Worker functionality as RPC functions on an object. </p>
+
+<p>WorkerJS allows easy clustering of many Workers - all the Workers in a cluster appear as a single object, invoking a function on the cluster will send the request to every Worker in the cluster and the callback will fire when every Worker in the cluster has finished. </p>
+
+<p>WorkerJS can benchmark a users browser to determine the most effective number of Workers to spawn in order to maximise throughput.</p>
+
+<h2>Overview</h2>
+
+<p>Let the main Javascript thread become a means for accessing shared memory - workers request interaction with the DOM, shared memory and each other via the 'Bridge'. It's an object containing a list of functions which are invoked by the main Javascript thread but are accessible by all 'Workers'. The 'Bridge' makes it simple to push data and functionality into the 'Workers'.</p>
+
+<p>On the other side of things is the 'Gateway'. The 'Gateway' makes it easy for the main Javascript thread to request functionality of the 'Worker'. Functions defined within the 'Worker' are exposed as properties of an 'instance' object (which is passed into the 'Gateway' as a parameter). </p>
+
+<p>Calling a function on the 'instance' object within the 'Gateway' will cause the 'Worker' to invoke the same function, which can do all it's heavy processing and interact with the main Javascript thread via the functions in the 'Bridge'.</p>
+
+<div class="highlight"><pre><span class="kd">var</span> <span class="nx">theRestOfMyCode</span><span class="p">;</span>
+
+<span class="nx">WorkerJS</span><span class="p">({</span>
+  <span class="c1">// This is the 'Bridge'</span>
+  <span class="c1">// Functions defined here become global functions in the Worker.</span>
+  <span class="c1">// Functions defined here should sync data between Worker &lt;-&gt; theRestOfMyCode.</span>
+<span class="p">},</span> <span class="kd">function</span><span class="p">()</span> <span class="p">{</span> 
+  <span class="c1">// This is the 'Worker', it runs in a WebWorker (in a separate context).</span>
+  <span class="c1">// Functions defined in the Bridge exist in this global scope, nothing else</span>
+  <span class="c1">// outside of this function will be in scope.</span>
+  <span class="c1">// Functions defined here become properties of 'instance' in the Gateway.</span>
+<span class="p">},</span> <span class="kd">function</span><span class="p">(</span><span class="nx">instance</span><span class="p">)</span> <span class="p">{</span>
+  <span class="c1">// This is the 'Gateway', it allows interaction with the Worker.</span>
+  <span class="c1">// Functions defined in the Worker become properties of the 'instance' object.</span>
+  <span class="c1">// This function will only be invoked once.</span>
+  <span class="c1">// Invoking a function on 'instance' will call the function on the Worker.</span>
+  <span class="c1">// If the workerCount in the options is greater than 1, invoking a function on</span>
+  <span class="c1">// 'instance' will call the function on every Worker, if there is a callback</span>
+  <span class="c1">// to the function it will only be invoked once, and only when EVERY worker's</span>
+  <span class="c1">// function has invoked it's callback. Calling instance.terminate() will kill</span>
+  <span class="c1">// the worker(s).</span>
+<span class="p">},</span> <span class="p">{</span>
+  <span class="c1">// WorkerCount. This parameter isn't required, it defaults to 1.</span>
+  <span class="c1">// Setting workerCount to (-1) will start a benchmark to determine the most </span>
+  <span class="c1">// effective number of workers the browser can handle, then proceed with that</span>
+  <span class="c1">// number.</span>
+  <span class="nx">workerCount</span><span class="o">:</span> <span class="mi">1</span>
+<span class="p">});</span>
+</pre></div>
+
+<h2>Example Working with Primes</h2>
+
+<div class="highlight"><pre><span class="c1">// The goal is to populate this array with a bunch of prime numbers.</span>
+<span class="c1">// These variables can be considered shared memory.</span>
+<span class="kd">var</span> <span class="nx">primes</span><span class="o">=</span><span class="p">[];</span>
+<span class="kd">var</span> <span class="nx">finished</span> <span class="o">=</span> <span class="kc">false</span><span class="p">;</span>
+
+<span class="nx">WorkerJS</span><span class="p">({</span> <span class="c1">// TLDR; Functions we want to push into the Worker.</span>
+  <span class="c1">// 1. This is the 'Bridge'.</span>
+  <span class="c1">// 2. These functions are used by the Worker to interact with the main thread.</span>
+  <span class="c1">// 3. These functions are invoked in the normal main Javascript scope.</span>
+  <span class="c1">// 4. All functions have this.callback to send data back into the Worker.</span>
+  <span class="nx">addPrime</span><span class="o">:</span> <span class="kd">function</span><span class="p">(</span><span class="nx">somePrime</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nx">primes</span><span class="p">.</span><span class="nx">push</span><span class="p">(</span><span class="nx">somePrime</span><span class="p">);</span>
+  <span class="p">},</span>
+<span class="p">},</span> <span class="kd">function</span><span class="p">()</span> <span class="p">{</span> <span class="c1">// TLDR; Definition of a Worker.</span>
+  <span class="c1">// 1. This is the 'Worker'.</span>
+  <span class="c1">// 2. This code runs in parallel, in a totally separate WebWorker scope. </span>
+  <span class="c1">// 3. Functions in the Bridge will be available in this global scope.</span>
+  <span class="c1">// 4. Functions defined in the Worker will become properties in the Gateway.</span>
+  <span class="c1">// 5. All functions have this.callback to send data back into the main scope.</span>
+  <span class="c1">// 6. WorkerJS provides the functions 'log' and 'warn' to help with debugging.</span>
+  <span class="kd">function</span> <span class="nx">findPrimesBetween</span><span class="p">(</span><span class="nx">a</span><span class="p">,</span> <span class="nx">b</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nx">log</span><span class="p">(</span><span class="s2">"Searching for primes between"</span><span class="p">,</span> <span class="nx">a</span><span class="p">,</span> <span class="s2">"and"</span><span class="p">,</span> <span class="nx">b</span><span class="p">);</span>
+
+    <span class="k">for</span> <span class="p">(</span><span class="kd">var</span> <span class="nx">i</span><span class="o">=</span><span class="nx">a</span><span class="p">;</span> <span class="nx">i</span><span class="o">&lt;</span><span class="nx">b</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+      <span class="kd">var</span> <span class="nx">prime</span> <span class="o">=</span> <span class="kc">true</span><span class="p">;</span>
+      <span class="k">for</span> <span class="p">(</span><span class="kd">var</span> <span class="nx">j</span><span class="o">=</span><span class="mi">2</span><span class="p">;</span> <span class="nx">j</span><span class="o">&lt;</span><span class="nx">i</span><span class="p">;</span> <span class="nx">j</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span> <span class="p">(</span><span class="nx">i</span><span class="o">%</span><span class="nx">j</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="p">)</span> <span class="p">{</span>
+          <span class="nx">prime</span> <span class="o">=</span> <span class="kc">false</span><span class="p">;</span>
+          <span class="k">break</span><span class="p">;</span>
+        <span class="p">}</span>
+      <span class="p">}</span>
+      <span class="k">if</span> <span class="p">(</span><span class="nx">prime</span><span class="p">)</span> <span class="nx">addPrime</span><span class="p">(</span><span class="nx">i</span><span class="p">);</span>
+    <span class="p">}</span>
+    <span class="k">this</span><span class="p">.</span><span class="nx">callback</span><span class="p">({</span> <span class="nx">result</span><span class="o">:</span> <span class="s2">"success"</span> <span class="p">});</span>
+  <span class="p">};</span>
+<span class="p">},</span> <span class="kd">function</span><span class="p">(</span><span class="nx">instance</span><span class="p">)</span> <span class="p">{</span> <span class="c1">// TLDR; Interacting with the Worker.</span>
+  <span class="c1">// 1. This is the 'Gateway'.</span>
+  <span class="c1">// 2. 'instance' has a property for each function defined in the Worker.</span>
+  <span class="c1">// 3. Each function defined in the Worker gains a callback parameter.</span>
+  <span class="nx">instance</span><span class="p">.</span><span class="nx">findPrimesBetween</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1000000</span><span class="p">,</span> <span class="kd">function</span><span class="p">(</span><span class="nx">result</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s2">"Primes between 2 and 1000000:"</span><span class="p">,</span> <span class="nx">primes</span><span class="p">);</span>
+    <span class="nx">finished</span> <span class="o">=</span> <span class="kc">true</span><span class="p">;</span>
+    <span class="nx">instance</span><span class="p">.</span><span class="nx">terminate</span><span class="p">();</span> <span class="c1">// we're done - kill off our worker</span>
+  <span class="p">});</span>
+<span class="p">});</span>
+
+<span class="c1">// This demonstrates the parallel nature of this demo.</span>
+<span class="kd">var</span> <span class="nx">checkProgress</span> <span class="o">=</span> <span class="kd">function</span><span class="p">()</span> <span class="p">{</span>
+  <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s2">"Found"</span><span class="p">,</span> <span class="nx">primes</span><span class="p">.</span><span class="nx">length</span><span class="p">,</span> <span class="s2">"primes"</span><span class="p">);</span>
+  <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="nx">finished</span><span class="p">)</span> <span class="nx">setTimeout</span><span class="p">(</span><span class="nx">checkProgress</span><span class="p">,</span> <span class="mi">1000</span><span class="p">);</span>
+<span class="p">};</span>
+<span class="nx">checkProgress</span><span class="p">();</span>
+</pre></div>
+
+<h2>More Effective Example</h2>
+
+<p>This example uses a cluster of workers to get the job done much MUCH faster. If you run this example you'll see it run a quick benchmark to determine how many workers the browser can effectively use - it will then spawn that many workers in a cluster. The Gateway only gets invoked once, and calling instances.testIfPrime() invokes the function on each of the clustered workers. The callback fires once all the worker's functions callback. The Bridge allows each Worker to request work units from main thread and write their output back to the main thread. Pretty neat.</p>
+
+<div class="highlight"><pre><span class="kd">var</span> <span class="nx">primes</span><span class="o">=</span><span class="p">[];</span>
+<span class="kd">var</span> <span class="nx">unit</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+<span class="kd">var</span> <span class="nx">finished</span> <span class="o">=</span> <span class="kc">false</span><span class="p">;</span>
+
+<span class="nx">WorkerJS</span><span class="p">({</span> <span class="c1">// TLDR; Functions we want to push into the Worker scope.</span>
+  <span class="nx">addPrime</span><span class="o">:</span> <span class="kd">function</span><span class="p">(</span><span class="nx">somePrime</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nx">primes</span><span class="p">.</span><span class="nx">push</span><span class="p">(</span><span class="nx">somePrime</span><span class="p">);</span>
+  <span class="p">},</span>
+  <span class="nx">getUnit</span><span class="o">:</span> <span class="kd">function</span><span class="p">()</span> <span class="p">{</span>
+    <span class="k">this</span><span class="p">.</span><span class="nx">callback</span><span class="p">(</span><span class="nx">unit</span><span class="o">++</span><span class="p">);</span>
+  <span class="p">}</span>
+<span class="p">},</span> <span class="kd">function</span><span class="p">()</span> <span class="p">{</span> <span class="c1">// TLDR; Definition of a Worker.</span>
+  <span class="kd">function</span> <span class="nx">testIfPrime</span><span class="p">()</span> <span class="p">{</span>
+    <span class="kd">var</span> <span class="nx">self</span> <span class="o">=</span> <span class="k">this</span><span class="p">;</span>
+
+    <span class="kd">var</span> <span class="nx">processNextUnit</span> <span class="o">=</span> <span class="kd">function</span><span class="p">()</span> <span class="p">{</span>
+      <span class="nx">getUnit</span><span class="p">(</span><span class="kd">function</span><span class="p">(</span><span class="nx">i</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="nx">i</span><span class="o">&gt;</span><span class="mi">200000</span><span class="p">)</span> <span class="k">return</span> <span class="nx">self</span><span class="p">.</span><span class="nx">callback</span><span class="p">(</span><span class="s2">"Success"</span><span class="p">);</span>
+        <span class="kd">var</span> <span class="nx">prime</span> <span class="o">=</span> <span class="kc">true</span><span class="p">;</span>
+        <span class="k">for</span> <span class="p">(</span><span class="kd">var</span> <span class="nx">j</span><span class="o">=</span><span class="mi">2</span><span class="p">;</span> <span class="nx">j</span><span class="o">&lt;</span><span class="nx">i</span><span class="p">;</span> <span class="nx">j</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+          <span class="k">if</span> <span class="p">(</span> <span class="p">(</span><span class="nx">i</span><span class="o">%</span><span class="nx">j</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="p">)</span> <span class="p">{</span>
+            <span class="nx">prime</span> <span class="o">=</span> <span class="kc">false</span><span class="p">;</span>
+            <span class="k">break</span><span class="p">;</span>
+          <span class="p">}</span>
+        <span class="p">}</span>
+        <span class="k">if</span> <span class="p">(</span><span class="nx">prime</span><span class="p">)</span> <span class="nx">addPrime</span><span class="p">(</span><span class="nx">i</span><span class="p">);</span>
+        <span class="k">return</span> <span class="nx">processNextUnit</span><span class="p">();</span>
+      <span class="p">});</span>
+    <span class="p">};</span>
+    <span class="nx">processNextUnit</span><span class="p">();</span>
+  <span class="p">};</span>
+<span class="p">},</span> <span class="kd">function</span><span class="p">(</span><span class="nx">instances</span><span class="p">)</span> <span class="p">{</span> <span class="c1">// TLDR; Interacting with the Worker(s).</span>
+  <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s2">"Gateway has been called."</span><span class="p">);</span>
+
+  <span class="kd">var</span> <span class="nx">checkProgress</span> <span class="o">=</span> <span class="kd">function</span><span class="p">()</span> <span class="p">{</span>
+    <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s2">"Found"</span><span class="p">,</span> <span class="nx">primes</span><span class="p">.</span><span class="nx">length</span><span class="p">,</span> <span class="s2">"primes"</span><span class="p">);</span>
+    <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="nx">finished</span><span class="p">)</span> <span class="nx">setTimeout</span><span class="p">(</span><span class="nx">checkProgress</span><span class="p">,</span> <span class="mi">1000</span><span class="p">);</span>
+  <span class="p">};</span>
+  <span class="nx">checkProgress</span><span class="p">();</span>
+
+  <span class="kd">var</span> <span class="nx">now</span> <span class="o">=</span> <span class="k">new</span> <span class="nb">Date</span><span class="p">();</span>
+  <span class="nx">instances</span><span class="p">.</span><span class="nx">testIfPrime</span><span class="p">(</span><span class="kd">function</span><span class="p">(</span><span class="nx">result</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s2">"Gateway callback - Done!"</span><span class="p">,</span> <span class="nx">primes</span><span class="p">,</span> <span class="nx">result</span><span class="p">);</span>
+    <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s2">"Duration:"</span><span class="p">,</span> <span class="p">(</span><span class="k">new</span> <span class="nb">Date</span><span class="p">())</span><span class="o">-</span><span class="nx">now</span><span class="p">,</span> <span class="s2">"ms"</span><span class="p">);</span>
+    <span class="nx">finished</span> <span class="o">=</span> <span class="kc">true</span><span class="p">;</span>
+    <span class="nx">instances</span><span class="p">.</span><span class="nx">terminate</span><span class="p">();</span>
+  <span class="p">});</span>
+<span class="p">},</span> <span class="p">{</span> <span class="nx">workerCount</span><span class="o">:</span> <span class="o">-</span><span class="mi">1</span> <span class="p">});</span>
+</pre></div>
+
+<p>Sample Console Output:</p>
+
+<pre><code>Computing most effective number of workers... 
+Benchmark [ 1 workers ] 258 ms - 29 units processed
+Benchmark [ 2 workers ] 260 ms - 61 units processed
+Benchmark [ 3 workers ] 261 ms - 91 units processed
+Benchmark [ 4 workers ] 260 ms - 133 units processed
+Benchmark [ 5 workers ] 258 ms - 163 units processed
+Benchmark [ 6 workers ] 258 ms - 219 units processed
+Benchmark [ 7 workers ] 260 ms - 276 units processed
+Benchmark [ 8 workers ] 262 ms - 303 units processed
+Benchmark [ 9 workers ] 259 ms - 348 units processed
+Benchmark [ 10 workers ] 261 ms - 426 units processed
+Benchmark [ 11 workers ] 260 ms - 415 units processed
+Starting 10 workers
+Gateway has been called.
+Found 0 primes
+Found 2541 primes 
+Found 4755 primes 
+Found 6680 primes 
+Found 8623 primes 
+Found 10464 primes 
+Found 12190 primes 
+Found 13872 primes 
+Found 15462 primes 
+Found 16985 primes 
+Gateway callback - Done! 
+[3, 2, 5, 7, 1, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71…]
+Duration: 9691 ms
+Found 17985 primes 
+</code></pre>
+      </section>
+    </div>
+
+    <!-- FOOTER  -->
+    <div id="footer_wrap" class="outer">
+      <footer class="inner">
+        <p class="copyright">WorkerJS maintained by <a href="https://github.com/holidayextras">holidayextras</a></p>
+        <p>Published with <a href="http://pages.github.com">GitHub Pages</a></p>
+      </footer>
+    </div>
+
+    
+
+  </body>
+</html>

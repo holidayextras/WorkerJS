@@ -43,17 +43,18 @@ WorkerJS = (function() {
         // to perform an action. Call the named function, passing in a callback
         // set up to send any resulting data back to the main thread.
         //
-        workerGlobalScope[e.data._request.name].apply({
-          callback: function(result) {
-            postMessage({
-              _response: {
-                token: e.data._request.token,
-                name: e.data._request.name,
-                result: result
-              }
-            });
-          }
-        }, e.data._request.data);
+        var args = e.data._request.data;
+        args.push(function() {
+          var args = Array.prototype.slice.call(arguments);
+          postMessage({
+            _response: {
+              token: e.data._request.token,
+              name: e.data._request.name,
+              data: args
+            }
+          });
+        });
+        workerGlobalScope[e.data._request.name].apply({ }, args);
       } else if (e.data._response) {
         //
         // This represents a response from the main thread's Bridge to a request 
@@ -62,7 +63,7 @@ WorkerJS = (function() {
         var callback = queue[e.data._response.token];
         delete queue[e.data._response.token];
         delete e.data._response.token;
-        callback(e.data._response.result);
+        callback.apply({ }, e.data._response.data);
       }
     }, false);
 
@@ -113,11 +114,15 @@ WorkerJS = (function() {
     var bridge = {
       log: function() {
         var log = Function.prototype.bind.call(console.log, console);
-        log.apply(console, arguments);
+        var args = Array.prototype.slice.call(arguments);
+        args.pop();
+        log.apply(console, args);
       },
       warn: function() {
         var warn = Function.prototype.bind.call(console.warn, console);
-        warn.apply(console, arguments);
+        var args = Array.prototype.slice.call(arguments);
+        args.pop();
+        warn.apply(console, args);
       }
     };
     //
@@ -166,17 +171,18 @@ WorkerJS = (function() {
         // within the Bridge. Call the named function, passing in a callback
         // set up to send any resulting data back to the WebWorker.
         //
-        bridge[e.data._request.name].apply({
-          callback: function(result) {
-            worker.postMessage({
-              _response: {
-                token: e.data._request.token,
-                name: e.data._request.name,
-                result: result
-              }
-            });
-          }
-        }, e.data._request.data);
+        var args = e.data._request.data;
+        args.push(function() {
+          var args = Array.prototype.slice.call(arguments);
+          worker.postMessage({
+            _response: {
+              token: e.data._request.token,
+              name: e.data._request.name,
+              data: args
+            }
+          });
+        });
+        bridge[e.data._request.name].apply({ }, args);
       } else if (e.data._response) {
         //
         // This represents a response from the WebWorker to a request from
@@ -185,7 +191,7 @@ WorkerJS = (function() {
         var callback = queue[e.data._response.token];
         delete queue[e.data._response.token];
         delete e.data._response.token;
-        callback(e.data._response.result);
+        callback.apply({ }, e.data._response.data);
       }
     }, false);
     
@@ -209,7 +215,7 @@ WorkerJS = (function() {
   //
   var spawnMultipleWorkers = function(bridgeFunctions, workerCode, gatewayFunction, totalInstances) {
     totalInstances = totalInstances.workerCount || 1;
-    var runningInstances = [];
+    var runningInstances = [], benchmark;
     
     //
     // Every Worker will call this next function. Each one will register 
@@ -262,7 +268,7 @@ WorkerJS = (function() {
         //
         // Only one instance of the Gateway will run.
         //
-        gatewayFunction(newInstance);
+        gatewayFunction(newInstance, totalInstances, benchmark);
       }
     };
     
@@ -275,7 +281,8 @@ WorkerJS = (function() {
       }
     } else if (totalInstances == -1) {
       console.log("Computing most effective number of workers...");
-      computeMaxWorkers(function(maxWorkers) {
+      computeMaxWorkers(function(maxWorkers, time, count) {
+        benchmark = { time: time, count: count };
         console.log("Starting", maxWorkers, "workers");
         totalInstances = maxWorkers;
         for (var i=0; i<=totalInstances; i++) {
@@ -301,7 +308,7 @@ WorkerJS = (function() {
           maxNumbers = count; workerCount++;
           return tryNext();
         } else {
-          return callback(workerCount-1);
+          return callback(workerCount-1, time, count);
         }
       });
     };
@@ -313,14 +320,14 @@ WorkerJS = (function() {
   //
   function benchmark(workerCount, callback) {
     spawnMultipleWorkers({ }, function() {
-      function startCounting() {
+      function startCounting(callback) {
         var done = false, i = 0;
         var self = this;
         
         setTimeout(function() { done = true; }, 250);
         
         var it = function() {
-          if (done) return self.callback(i);
+          if (done) return callback(i);
           i++;
           for (var j=0; j<1000; j++) { }
           setTimeout(it, 0);

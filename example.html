@@ -8,19 +8,20 @@
       var finished = false;
       
       WorkerJS({ // TLDR; Functions we want to push into the Worker scope.
-        addPrime: function(somePrime) {
+        addPrime: function(somePrime, callback) {
           primes.push(somePrime);
+          callback();
         },
-        getUnit: function() {
-          this.callback(unit++);
+        getUnit: function(callback) {
+          callback(unit++);
         }
       }, function() { // TLDR; Definition of the Worker.
-        function testIfPrime() {
+        function testIfPrime(callback) {
           var self = this;
           
           var processNextUnit = function() {
             getUnit(function(i) {
-              if (i>200000) return self.callback("Success");
+              if (i>200000) return callback("Success");
               var prime = true;
               for (var j=2; j<i; j++) {
                 if ( (i%j) == 0 ) {

@@ -62,18 +62,19 @@ WorkerJS({ // TLDR; Functions we want to push into the Worker.
   // 1. This is the 'Bridge'.
   // 2. These functions are used by the Worker to interact with the main thread.
   // 3. These functions are invoked in the normal main Javascript scope.
-  // 4. All functions have this.callback to send data back into the Worker.
-  addPrime: function(somePrime) {
+  // 4. All functions get a callback parameter to send data back to the Worker.
+  addPrime: function(somePrime, callback) {
     primes.push(somePrime);
+    callback();
   },
 }, function() { // TLDR; Definition of a Worker.
   // 1. This is the 'Worker'.
   // 2. This code runs in parallel, in a totally separate WebWorker scope. 
   // 3. Functions in the Bridge will be available in this global scope.
   // 4. Functions defined in the Worker will become properties in the Gateway.
-  // 5. All functions have this.callback to send data back into the main scope.
+  // 5. All functions get a callback parameter to send data to the main scope.
   // 6. WorkerJS provides the functions 'log' and 'warn' to help with debugging.
-  function findPrimesBetween(a, b) {
+  function findPrimesBetween(a, b, callback) {
     log("Searching for primes between", a, "and", b);
     
     for (var i=a; i<b; i++) {
@@ -86,7 +87,7 @@ WorkerJS({ // TLDR; Functions we want to push into the Worker.
       }
       if (prime) addPrime(i);
     }
-    this.callback({ result: "success" });
+    callback({ result: "success" });
   };
 }, function(instance) { // TLDR; Interacting with the Worker.
   // 1. This is the 'Gateway'.
@@ -117,19 +118,20 @@ var unit = 1;
 var finished = false;
 
 WorkerJS({ // TLDR; Functions we want to push into the Worker scope.
-  addPrime: function(somePrime) {
+  addPrime: function(somePrime, callback) {
     primes.push(somePrime);
+    callback();
   },
-  getUnit: function() {
-    this.callback(unit++);
+  getUnit: function(callback) {
+    callback(unit++);
   }
 }, function() { // TLDR; Definition of a Worker.
-  function testIfPrime() {
+  function testIfPrime(callback) {
     var self = this;
     
     var processNextUnit = function() {
       getUnit(function(i) {
-        if (i>200000) return self.callback("Success");
+        if (i>200000) return callback("Success");
         var prime = true;
         for (var j=2; j<i; j++) {
           if ( (i%j) == 0 ) {

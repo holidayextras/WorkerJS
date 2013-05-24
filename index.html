@@ -92,18 +92,19 @@
   <span class="c1">// 1. This is the 'Bridge'.</span>
   <span class="c1">// 2. These functions are used by the Worker to interact with the main thread.</span>
   <span class="c1">// 3. These functions are invoked in the normal main Javascript scope.</span>
-  <span class="c1">// 4. All functions have this.callback to send data back into the Worker.</span>
-  <span class="nx">addPrime</span><span class="o">:</span> <span class="kd">function</span><span class="p">(</span><span class="nx">somePrime</span><span class="p">)</span> <span class="p">{</span>
+  <span class="c1">// 4. All functions get a callback parameter to send data back to the Worker.</span>
+  <span class="nx">addPrime</span><span class="o">:</span> <span class="kd">function</span><span class="p">(</span><span class="nx">somePrime</span><span class="p">,</span> <span class="nx">callback</span><span class="p">)</span> <span class="p">{</span>
     <span class="nx">primes</span><span class="p">.</span><span class="nx">push</span><span class="p">(</span><span class="nx">somePrime</span><span class="p">);</span>
+    <span class="nx">callback</span><span class="p">();</span>
   <span class="p">},</span>
 <span class="p">},</span> <span class="kd">function</span><span class="p">()</span> <span class="p">{</span> <span class="c1">// TLDR; Definition of a Worker.</span>
   <span class="c1">// 1. This is the 'Worker'.</span>
   <span class="c1">// 2. This code runs in parallel, in a totally separate WebWorker scope. </span>
   <span class="c1">// 3. Functions in the Bridge will be available in this global scope.</span>
   <span class="c1">// 4. Functions defined in the Worker will become properties in the Gateway.</span>
-  <span class="c1">// 5. All functions have this.callback to send data back into the main scope.</span>
+  <span class="c1">// 5. All functions get a callback parameter to send data to the main scope.</span>
   <span class="c1">// 6. WorkerJS provides the functions 'log' and 'warn' to help with debugging.</span>
-  <span class="kd">function</span> <span class="nx">findPrimesBetween</span><span class="p">(</span><span class="nx">a</span><span class="p">,</span> <span class="nx">b</span><span class="p">)</span> <span class="p">{</span>
+  <span class="kd">function</span> <span class="nx">findPrimesBetween</span><span class="p">(</span><span class="nx">a</span><span class="p">,</span> <span class="nx">b</span><span class="p">,</span> <span class="nx">callback</span><span class="p">)</span> <span class="p">{</span>
     <span class="nx">log</span><span class="p">(</span><span class="s2">"Searching for primes between"</span><span class="p">,</span> <span class="nx">a</span><span class="p">,</span> <span class="s2">"and"</span><span class="p">,</span> <span class="nx">b</span><span class="p">);</span>
 
     <span class="k">for</span> <span class="p">(</span><span class="kd">var</span> <span class="nx">i</span><span class="o">=</span><span class="nx">a</span><span class="p">;</span> <span class="nx">i</span><span class="o">&lt;</span><span class="nx">b</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
@@ -116,7 +117,7 @@
       <span class="p">}</span>
       <span class="k">if</span> <span class="p">(</span><span class="nx">prime</span><span class="p">)</span> <span class="nx">addPrime</span><span class="p">(</span><span class="nx">i</span><span class="p">);</span>
     <span class="p">}</span>
-    <span class="k">this</span><span class="p">.</span><span class="nx">callback</span><span class="p">({</span> <span class="nx">result</span><span class="o">:</span> <span class="s2">"success"</span> <span class="p">});</span>
+    <span class="nx">callback</span><span class="p">({</span> <span class="nx">result</span><span class="o">:</span> <span class="s2">"success"</span> <span class="p">});</span>
   <span class="p">};</span>
 <span class="p">},</span> <span class="kd">function</span><span class="p">(</span><span class="nx">instance</span><span class="p">)</span> <span class="p">{</span> <span class="c1">// TLDR; Interacting with the Worker.</span>
   <span class="c1">// 1. This is the 'Gateway'.</span>
@@ -146,19 +147,20 @@
 <span class="kd">var</span> <span class="nx">finished</span> <span class="o">=</span> <span class="kc">false</span><span class="p">;</span>
 
 <span class="nx">WorkerJS</span><span class="p">({</span> <span class="c1">// TLDR; Functions we want to push into the Worker scope.</span>
-  <span class="nx">addPrime</span><span class="o">:</span> <span class="kd">function</span><span class="p">(</span><span class="nx">somePrime</span><span class="p">)</span> <span class="p">{</span>
+  <span class="nx">addPrime</span><span class="o">:</span> <span class="kd">function</span><span class="p">(</span><span class="nx">somePrime</span><span class="p">,</span> <span class="nx">callback</span><span class="p">)</span> <span class="p">{</span>
     <span class="nx">primes</span><span class="p">.</span><span class="nx">push</span><span class="p">(</span><span class="nx">somePrime</span><span class="p">);</span>
+    <span class="nx">callback</span><span class="p">();</span>
   <span class="p">},</span>
-  <span class="nx">getUnit</span><span class="o">:</span> <span class="kd">function</span><span class="p">()</span> <span class="p">{</span>
-    <span class="k">this</span><span class="p">.</span><span class="nx">callback</span><span class="p">(</span><span class="nx">unit</span><span class="o">++</span><span class="p">);</span>
+  <span class="nx">getUnit</span><span class="o">:</span> <span class="kd">function</span><span class="p">(</span><span class="nx">callback</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nx">callback</span><span class="p">(</span><span class="nx">unit</span><span class="o">++</span><span class="p">);</span>
   <span class="p">}</span>
 <span class="p">},</span> <span class="kd">function</span><span class="p">()</span> <span class="p">{</span> <span class="c1">// TLDR; Definition of a Worker.</span>
-  <span class="kd">function</span> <span class="nx">testIfPrime</span><span class="p">()</span> <span class="p">{</span>
+  <span class="kd">function</span> <span class="nx">testIfPrime</span><span class="p">(</span><span class="nx">callback</span><span class="p">)</span> <span class="p">{</span>
     <span class="kd">var</span> <span class="nx">self</span> <span class="o">=</span> <span class="k">this</span><span class="p">;</span>
 
     <span class="kd">var</span> <span class="nx">processNextUnit</span> <span class="o">=</span> <span class="kd">function</span><span class="p">()</span> <span class="p">{</span>
       <span class="nx">getUnit</span><span class="p">(</span><span class="kd">function</span><span class="p">(</span><span class="nx">i</span><span class="p">)</span> <span class="p">{</span>
-        <span class="k">if</span> <span class="p">(</span><span class="nx">i</span><span class="o">&gt;</span><span class="mi">200000</span><span class="p">)</span> <span class="k">return</span> <span class="nx">self</span><span class="p">.</span><span class="nx">callback</span><span class="p">(</span><span class="s2">"Success"</span><span class="p">);</span>
+        <span class="k">if</span> <span class="p">(</span><span class="nx">i</span><span class="o">&gt;</span><span class="mi">200000</span><span class="p">)</span> <span class="k">return</span> <span class="nx">callback</span><span class="p">(</span><span class="s2">"Success"</span><span class="p">);</span>
         <span class="kd">var</span> <span class="nx">prime</span> <span class="o">=</span> <span class="kc">true</span><span class="p">;</span>
         <span class="k">for</span> <span class="p">(</span><span class="kd">var</span> <span class="nx">j</span><span class="o">=</span><span class="mi">2</span><span class="p">;</span> <span class="nx">j</span><span class="o">&lt;</span><span class="nx">i</span><span class="p">;</span> <span class="nx">j</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
           <span class="k">if</span> <span class="p">(</span> <span class="p">(</span><span class="nx">i</span><span class="o">%</span><span class="nx">j</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="p">)</span> <span class="p">{</span>
